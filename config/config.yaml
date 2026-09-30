@@ -1,0 +1,5 @@
+path_to_toy_datasets: datasets
+toy_dataset: fashion_mnist
+path_to_trained_model: models/toy_${toy_dataset}.pt
+alpha: 0.1
+random_seed: 0
