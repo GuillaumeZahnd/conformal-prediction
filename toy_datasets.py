@@ -7,6 +7,7 @@ import torchvision
 class Data:
     x: torch.Tensor
     y: torch.Tensor
+    class_names: tuple[str, ...] | None = None
 
     def __post_init__(self):
         if len(self.x) != len(self.y):
@@ -16,7 +17,7 @@ class Data:
         return len(self.y)
 
     def __getitem__(self, idx):
-        return Data(self.x[idx], self.y[idx])
+        return Data(self.x[idx], self.y[idx], self.class_names)
 
 
 def load_toy_dataset_fashion_mnist(download_path: str, train: bool) -> Data:
@@ -31,11 +32,13 @@ def load_toy_dataset_fashion_mnist(download_path: str, train: bool) -> Data:
         Data with:
             x: float32 tensor of shape (N, 1, 28, 28), pixel values in [0, 1].
             y: int64 tensor of shape (N,), class labels in {0, ..., 9}.
+            class_names: ("T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot")
     """
     ds = torchvision.datasets.FashionMNIST(download_path, train=train, download=True)
     x = ds.data.unsqueeze(1).float() / 255  # (N, 28, 28) uint8 -> (N, 1, 28, 28) float32
     y = ds.targets
-    return Data(x, y)
+    class_names = tuple(ds.classes)
+    return Data(x, y, class_names)
 
 
 def split_dataset(data: Data, frac: float, seed: int) -> tuple[Data, Data]:

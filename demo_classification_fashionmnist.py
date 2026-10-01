@@ -3,7 +3,8 @@ from omegaconf import DictConfig
 
 from toy_datasets import load_toy_dataset_fashion_mnist, split_dataset
 from toy_models import train_toy_classifier, load_toy_classifier
-from conformal import calibrate, evaluate
+from conformal import calibrate, evaluate, predict_probs
+from plot_classification import plot_prediction_set
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
@@ -34,7 +35,20 @@ def demo_classification_fashionmnist(cfg: DictConfig) -> None:
     # Test step
     evaluate(model, test_split, calibration.qhat)
 
+    # Plot one sample
+    sample_index = cfg.sample_index_demo if cfg.sample_index_demo < len(test_split) else 0
+    x = test_split.x[sample_index]
+    y = int(test_split.y[sample_index])
+    probs = predict_probs(model, x[None])[0]
+    plot_prediction_set(
+        image=x,
+        probs=probs,
+        qhat=calibration.qhat,
+        alpha=cfg.alpha,
+        sample_index=sample_index,
+        true_label=y,
+        class_names=test_split.class_names,
+    )
 
 if __name__ =="__main__":
     demo_classification_fashionmnist()
-
