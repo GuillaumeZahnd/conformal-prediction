@@ -1,5 +1,11 @@
 # Conformal prediction
 
+## Calibration procedure
+
+### Classification tasks
+
+<img width="1999" height="1341" alt="classification_calibration" src="https://github.com/user-attachments/assets/51c200c2-bd88-4481-9a2c-c3913e961aff" />
+
 ## How to interpret the results
 
 ### Classification tasks
@@ -12,7 +18,7 @@ For a new input $x$, the prediction set $\mathcal{S}(x) \subseteq \mathcal{Y}$ c
 
 Across an entire dataset, the distribution of set sizes $\vert\mathcal{S}(X)\vert$ indicates the model's overall uncertainty profile at coverage level $\alpha$.
 
-<img width="1999" height="1127" alt="classification_results" src="https://github.com/user-attachments/assets/366ccfa6-badc-445e-a4f7-8439cd2a0a62" />
+<img width="1999" height="1334" alt="classification_results" src="https://github.com/user-attachments/assets/0cc14a89-fb9a-40ef-aac8-9d60aedd78d4" />
 
 ## Resources
 
