@@ -29,14 +29,21 @@ def print_classification_uncertainty_report(
     print(f"Coverage (true label in prediction set): {nb_covered}/{nb_samples} ({nb_covered / nb_samples:.1%})")
     print("")
 
-    # How often prediction sets contain N classes, most frequent first
+    # How often prediction sets contain N classes, and how often the true label is inside them
     counts, frequencies = prediction_set_size_distribution(prediction_sets)
+    sizes = prediction_sets.sum(dim=1)
+    covered_counts = torch.bincount(sizes[covered], minlength=len(counts))
     order = torch.sort(frequencies, descending=True, stable=True).indices
-    print(f"{'set size':>8} | {'count':>7} | {'frequency':>9}")
+    print(f"{'set size':>8} | {'count':>7} | {'frequency':>9} | {'coverage':>8}")
     for n in order.tolist():
         if counts[n] == 0:
             break  # Skip cases that do not occur
-        print(f"{n:>8} | {counts[n].item():>7} | {frequencies[n].item():>9.3f}")
+        print(
+            f"{n:>8} | "
+            f"{counts[n].item():>7} | "
+            f"{frequencies[n].item():>9.3f} | "
+            f"{covered_counts[n].item() / counts[n].item():>8.3f}"
+        )
 
 
 def print_classification_calibration_report(calibration: "Calibration") -> None:
