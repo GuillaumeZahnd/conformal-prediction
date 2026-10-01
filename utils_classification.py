@@ -1,13 +1,10 @@
 import torch
 import math
-from typing import TYPE_CHECKING
 
-# Against circular imports
-if TYPE_CHECKING:
-    from conformal import Calibration
+from conformal_utils import Calibration
 
 
-def print_uncertainty_report(
+def print_classification_uncertainty_report(
     prediction_sets: torch.Tensor,
     covered: torch.Tensor,
 ) -> None:
@@ -42,29 +39,7 @@ def print_uncertainty_report(
         print(f"{n:>8} | {counts[n].item():>7} | {frequencies[n].item():>9.3f}")
 
 
-def prediction_set_size_distribution(prediction_sets: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    """
-    Count how often prediction sets contain exactly N classes, for N = 0, ..., nb_classes.
-
-    Args:
-        prediction_sets: Boolean mask of shape (nb_samples, nb_classes).
-
-    Returns:
-        counts: int64 tensor of shape (nb_classes + 1,).
-            counts[N] is the number of samples whose prediction set has exactly N classes.
-        frequencies: float64 tensor of shape (nb_classes + 1,).
-            frequencies[N] is the fraction of samples whose prediction set has exactly N classes.
-    """
-
-    nb_samples, nb_classes = prediction_sets.shape
-    sizes = prediction_sets.sum(dim=1)  # (nb_samples,), values in [0, nb_classes]
-    counts = torch.bincount(sizes, minlength=nb_classes + 1)
-    frequencies = counts.double() / nb_samples
-
-    return counts, frequencies
-
-
-def print_calibration_report(calibration: "Calibration") -> None:
+def print_classification_calibration_report(calibration: "Calibration") -> None:
     """Print the outcome of the calibration step."""
 
     print("\n" + "-"*64)
@@ -82,7 +57,7 @@ def print_calibration_report(calibration: "Calibration") -> None:
         print(f"A class is included in the prediction set if its softmax probability is >= {1 - calibration.qhat:.4f}")
 
 
-def print_classification_report(probs: torch.Tensor, targets: torch.Tensor) -> None:
+def print_classification_task_report(probs: torch.Tensor, targets: torch.Tensor) -> None:
     """
     Print basic classification metrics: overall accuracy, mean confidence, per-class accuracy.
 
@@ -110,3 +85,25 @@ def print_classification_report(probs: torch.Tensor, targets: torch.Tensor) -> N
         if support[c] == 0:
             continue  # Skip cases that do not occur
         print(f"{c:>5} | {support[c].item():>7} | {correct_per_class[c].item() / support[c].item():>8.3f}")
+
+
+def prediction_set_size_distribution(prediction_sets: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Count how often prediction sets contain exactly N classes, for N = 0, ..., nb_classes.
+
+    Args:
+        prediction_sets: Boolean mask of shape (nb_samples, nb_classes).
+
+    Returns:
+        counts: int64 tensor of shape (nb_classes + 1,).
+            counts[N] is the number of samples whose prediction set has exactly N classes.
+        frequencies: float64 tensor of shape (nb_classes + 1,).
+            frequencies[N] is the fraction of samples whose prediction set has exactly N classes.
+    """
+
+    nb_samples, nb_classes = prediction_sets.shape
+    sizes = prediction_sets.sum(dim=1)  # (nb_samples,), values in [0, nb_classes]
+    counts = torch.bincount(sizes, minlength=nb_classes + 1)
+    frequencies = counts.double() / nb_samples
+
+    return counts, frequencies

@@ -8,8 +8,8 @@ from toy_datasets import Data
 
 
 class ToyCNN(nn.Module):
-    """Small CNN for 28x28 grayscale images.
-
+    """
+    Small CNN for 28x28 grayscale images.
     Takes images in [0, 1], normalizes them internally, and returns logits.
     """
 
@@ -27,7 +27,7 @@ class ToyCNN(nn.Module):
         return self.net((x - self.mean) / self.std)
 
 
-def train_toy_classifier(
+def train_toy_classification_model(
     train: Data,
     weights_path: str,
     epochs: int = 1,
@@ -35,8 +35,8 @@ def train_toy_classifier(
     lr: float = 1e-3,
     seed: int = 0
 ) -> None:
-    """Train a ToyCNN and save its weights to `weights_path`.
-
+    """
+    Train a ToyCNN and save its weights to `weights_path`.
     Normalization statistics come from the training data only and are saved with the weights.
     """
     torch.manual_seed(seed)
@@ -55,11 +55,11 @@ def train_toy_classifier(
     torch.save(model.state_dict(), path)
 
 
-def load_toy_classifier(weights_path: str) -> ToyCNN:
-    """Load a ToyCNN saved by `train_toy_classifier`, in eval mode."""
+def load_toy_classification_model(weights_path: str) -> ToyCNN:
+    """Load a ToyCNN saved by `train_toy_classification_model`, in eval mode."""
     path = Path(weights_path)
     if not path.exists():
-        raise FileNotFoundError(f"No weights at {path}; run train_toy_classifier first.")
+        raise FileNotFoundError(f"No weights at {path}; run train_toy_classification_model first.")
     model = ToyCNN()   # placeholder mean/std: overwritten by the saved ones below
     model.load_state_dict(torch.load(path, map_location="cpu"))
     return model.eval()
