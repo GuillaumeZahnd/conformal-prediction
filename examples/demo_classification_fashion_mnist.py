@@ -4,6 +4,7 @@ from omegaconf import DictConfig
 from toy_datasets import load_toy_dataset_fashion_mnist, split_dataset
 from toy_model_classification import train_toy_classification_model, load_toy_classification_model
 from plot_classification import plot_prediction_set
+from utils import format_classification_task_report
 
 from conformal_prediction import (
     calibrate_classification,
@@ -40,26 +41,30 @@ def demo_classification_fashion_mnist(cfg: DictConfig) -> None:
 
     # Calibration step
     calibration = calibrate_classification(model, calibration_split.x, calibration_split.y, cfg.alpha)
-    print(format_classification_calibration(calibration))
+    print(format_classification_calibration(calibration), end="\n\n")
 
     # Test step
     uncertainty = evaluate_classification(model, test_split.x, test_split.y, calibration)
-    print(format_classification_uncertainty(uncertainty))
+    print(format_classification_uncertainty(uncertainty), end="\n\n")
+
+    # Some more evaluation
+    test_probs = predict_probs(model, test_split.x)
 
     # Plot one sample
     sample_index = cfg.sample_index_demo if cfg.sample_index_demo < len(test_split) else 0
-    x = test_split.x[sample_index]
-    y = int(test_split.y[sample_index])
-    probs = predict_probs(model, x[None])[0]
     plot_prediction_set(
-        image=x,
-        probs=probs,
+        image=test_split.x[sample_index],
+        probs=test_probs[sample_index],
         qhat=calibration.qhat,
         alpha=cfg.alpha,
         sample_index=sample_index,
-        true_label=y,
+        true_label=int(test_split.y[sample_index]),
         class_names=test_split.class_names,
     )
+
+    # Print basic classification metrics
+    print(format_classification_task_report(test_probs, test_split.y), end="\n\n")
+
 
 if __name__ =="__main__":
     demo_classification_fashion_mnist()
