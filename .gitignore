@@ -1,5 +1,10 @@
+*.egg-info/
+build/
+dist/
 *.swp
 __pycache__/
+*.pyc
 datasets/
 models/
 figures/
+.venv/

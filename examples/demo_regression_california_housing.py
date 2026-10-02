@@ -3,7 +3,13 @@ from omegaconf import DictConfig
 
 from toy_datasets import load_toy_dataset_california_housing, split_dataset
 from toy_model_regression import train_toy_regression_model, load_toy_regression_model
-from conformal_regression import calibrate_regression, evaluate_regression
+
+from conformal_prediction import (
+    calibrate_regression,
+    evaluate_regression,
+    format_regression_calibration,
+    format_regression_uncertainty,
+)
 
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
@@ -23,10 +29,12 @@ def demo_regression_california_housing(cfg: DictConfig) -> None:
     calibration_split, test_split = split_dataset(test_dataset, ratio=0.5, seed=cfg.random_seed)
 
     # Calibration step
-    calibration = calibrate_regression(model, calibration_split, alpha=cfg.alpha)
+    calibration = calibrate_regression(model, calibration_split.x, calibration_split.y, alpha=cfg.alpha)
+    print(format_regression_calibration(calibration))
 
     # Test step
-    evaluate_regression(model, test_split, calibration)
+    uncertainty = evaluate_regression(model, test_split.x, test_split.y, calibration)
+    print(format_regression_uncertainty(uncertainty))
 
 
 if __name__ =="__main__":
