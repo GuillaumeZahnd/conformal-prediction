@@ -53,7 +53,8 @@ def evaluate_regression(
     targets = y.double()
     covered = (targets >= lower) & (targets <= upper)
 
-    nb_samples, nb_covered = len(y), int(covered.sum())
+    nb_samples = len(y)
+    nb_covered = int(covered.sum())
 
     regression_uncertainty =  RegressionUncertainty(
         alpha=calibration.alpha,

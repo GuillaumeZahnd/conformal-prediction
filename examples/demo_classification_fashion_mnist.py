@@ -21,13 +21,11 @@ def demo_classification_fashion_mnist(cfg: DictConfig) -> None:
     # Train set
     # dataset_train.x: float32 tensor of shape (60000, 1, 28, 28), pixel values in [0, 1]
     # dataset_train.y: int64 tensor of shape (60000,), class labels in {0, ..., 9}
-    # CLASSES
     train_dataset = load_toy_dataset_fashion_mnist(download_path=cfg.path_to_toy_datasets, train=True)
 
     # Test set
     # dataset_test.x: float32 tensor of shape (10000, 1, 28, 28), pixel values in [0, 1]
     # dataset_testy: int64 tensor of shape (10000,), class labels in {0, ..., 9}
-    # CLASSES
     test_dataset = load_toy_dataset_fashion_mnist(download_path=cfg.path_to_toy_datasets, train=False)
 
     # Train a lightweight classification model for one epoch and save the weights
@@ -40,7 +38,7 @@ def demo_classification_fashion_mnist(cfg: DictConfig) -> None:
     calibration_split, test_split = split_dataset(test_dataset, ratio=0.5, seed=cfg.random_seed)
 
     # Calibration step
-    calibration = calibrate_classification(model, calibration_split.x, calibration_split.y, cfg.alpha)
+    calibration = calibrate_classification(model, calibration_split.x, calibration_split.y, cfg.alpha, score_type=cfg.score_type)
     print(format_classification_calibration(calibration), end="\n\n")
 
     # Test step

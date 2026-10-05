@@ -33,8 +33,14 @@ def predict_probs(model: torch.nn.Module, x: torch.Tensor, batch_size: int = 256
     return torch.cat(out)
 
 
-def calibrate_classification(model: torch.nn.Module, x: torch.Tensor, y: torch.Tensor, alpha: float) -> Calibration:
-    """Compute the conformal threshold from held-out labelled data (LAC score)."""
+def calibrate_classification(
+    model: torch.nn.Module,
+    x: torch.Tensor,
+    y: torch.Tensor,
+    alpha: float,
+    score_type: str = "lac"
+) -> Calibration:
+    """Compute the conformal threshold from held-out labelled data using the specified score type."""
 
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
@@ -43,9 +49,15 @@ def calibrate_classification(model: torch.nn.Module, x: torch.Tensor, y: torch.T
 
     probs = predict_probs(model, x)  # (nb_calibration_samples, nb_classes), in [0, 1]
 
-    # Calibration score: 1 - p(true_class)
-    prob_true_class = probs[torch.arange(nb_calibration_samples), y]
-    calibration_scores = 1 - prob_true_class  # (nb_calibration_samples), in [0, 1]
+    if score_type == "lac":
+        # Local Average Conformity: 1 - p(true_class)
+        prob_true_class = probs[torch.arange(nb_calibration_samples), y]
+        calibration_scores = 1 - prob_true_class  # (nb_calibration_samples), in [0, 1]
+    elif score_type == "sps":
+        # Smallest Probability Score
+        calibration_scores = probs.min(dim=1).values  # (nb_calibration_samples), in [0, 1]
+    else:
+        raise ValueError(f"Unknown score type: {score_type}. Use 'lac' or 'sps'.")
 
     qhat = conformal_quantile(calibration_scores, alpha)
     calibration = Calibration(alpha, qhat, nb_calibration_samples)
@@ -66,7 +78,7 @@ def evaluate_classification(
     # Boolean mask of shape (nb_samples, nb_classes). True where a class belongs to the prediction set of a sample.
     prediction_sets = (1 - probs) <= calibration.qhat
 
-    #Boolean tensor of shape (nb_samples,). True where the true label of a sample is inside its prediction set.
+    # Boolean tensor of shape (nb_samples,). True where the true label of a sample is inside its prediction set.
     covered = prediction_sets[torch.arange(len(y)), y]
 
     nb_samples, nb_classes = prediction_sets.shape
