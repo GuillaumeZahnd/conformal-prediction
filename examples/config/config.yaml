@@ -4,4 +4,3 @@ path_to_trained_model: models/toy_${toy_dataset}.pt
 alpha: 0.05
 random_seed: 0
 sample_index_demo: 201
-score_type: lac  # Options: "lac" or "sps"

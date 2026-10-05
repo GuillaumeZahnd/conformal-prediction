@@ -38,7 +38,6 @@ def calibrate_classification(
     x: torch.Tensor,
     y: torch.Tensor,
     alpha: float,
-    score_type: str = "lac"
 ) -> Calibration:
     """Compute the conformal threshold from held-out labelled data using the specified score type."""
 
@@ -49,15 +48,10 @@ def calibrate_classification(
 
     probs = predict_probs(model, x)  # (nb_calibration_samples, nb_classes), in [0, 1]
 
-    if score_type == "lac":
-        # Local Average Conformity: 1 - p(true_class)
-        prob_true_class = probs[torch.arange(nb_calibration_samples), y]
-        calibration_scores = 1 - prob_true_class  # (nb_calibration_samples), in [0, 1]
-    elif score_type == "sps":
-        # Smallest Probability Score
-        calibration_scores = probs.min(dim=1).values  # (nb_calibration_samples), in [0, 1]
-    else:
-        raise ValueError(f"Unknown score type: {score_type}. Use 'lac' or 'sps'.")
+    prob_true_class = probs[torch.arange(nb_calibration_samples), y]
+    
+    # Local Average Conformity: 1 - p(true_class)
+    calibration_scores = 1 - prob_true_class  # (nb_calibration_samples), in [0, 1]
 
     qhat = conformal_quantile(calibration_scores, alpha)
     calibration = Calibration(alpha, qhat, nb_calibration_samples)
