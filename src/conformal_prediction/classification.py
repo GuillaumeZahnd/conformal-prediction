@@ -2,11 +2,41 @@ import torch
 import math
 from dataclasses import dataclass
 
-from .core import Calibration, conformal_quantile
+from .core import calibrate, Calibration
 
 
 @dataclass(frozen=True)
 class ClassificationUncertainty:
+    """Result of a conformal classification evaluation on a labelled test set.
+
+    Attributes
+    ----------
+    nb_samples : int
+        Number of evaluated test samples.
+    nb_covered : int
+        Number of samples whose prediction set contains the true label.
+    coverage : float
+        Empirical coverage, ``nb_covered / nb_samples``. The conformal guarantee targets ``1 - alpha``.
+    mean_set_size : float
+        Mean number of classes in the prediction sets.
+    median_set_size : int
+        Smallest set size ``N`` such that at least 50% of the samples have a set of ``N`` classes or fewer.
+    set_size_q05 : int
+        Smallest set size ``N`` such that at least 5% of the samples have a set of ``N`` classes or fewer.
+    set_size_q95 : int
+        Smallest set size ``N`` such that at least 95% of the samples have a set of ``N`` classes or fewer.
+    min_set_size : int
+        Smallest observed prediction set size; ``0`` if any set is empty.
+    max_set_size : int
+        Largest observed prediction set size.
+    set_size_counts : tuple of int
+        Length ``nb_classes + 1``. Entry ``N`` is the number of samples whose set has exactly ``N`` classes.
+    set_size_frequencies : tuple of float
+        Length ``nb_classes + 1``. Entry ``N`` is ``set_size_counts[N] / nb_samples``; the entries sum to 1.
+    covered_per_set_size : tuple of int
+        Length ``nb_classes + 1``. Entry ``N`` is the number of samples with a set of ``N`` classes
+        that contain the true label. Entry ``0`` is always ``0``.
+    """
     nb_samples: int
     nb_covered: int
     coverage: float
@@ -16,14 +46,33 @@ class ClassificationUncertainty:
     set_size_q95: int
     min_set_size: int
     max_set_size: int
-    set_size_counts: tuple[int, ...]         # index N -> number of samples whose set has N classes
-    set_size_frequencies: tuple[float, ...]  # index N -> set_size_counts[N] / nb_samples
-    covered_per_set_size: tuple[int, ...]    # index N -> how many of those contain the true label
+    set_size_counts: tuple[int, ...]
+    set_size_frequencies: tuple[float, ...]
+    covered_per_set_size: tuple[int, ...]
 
 
 @torch.no_grad()
-def predict_probs(model: torch.nn.Module, x: torch.Tensor, batch_size: int = 256) -> torch.Tensor:
-    """Softmax probabilities, shape (N, K), float64, on CPU."""
+def predict_probs(
+    model: torch.nn.Module,
+    x: torch.Tensor,
+    batch_size: int = 256
+) -> torch.Tensor:
+    """Softmax probabilities, shape (N, K), float64, on CPU.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The neural network classification model.
+    x : torch.Tensor
+        Input features tensor of shape ``(N, ...)``.
+    batch_size : int, optional
+        Batch size for inference.
+
+    Returns
+    -------
+    torch.Tensor
+        Predicted softmax probabilities of shape ``(N, K)`` on CPU in float64.
+    """
     model.eval()
     device = next(model.parameters()).device
     out = [
@@ -39,24 +88,55 @@ def calibrate_classification(
     y: torch.Tensor,
     alpha: float,
 ) -> Calibration:
-    """Compute the conformal threshold from held-out labelled data using the specified score type."""
+    """Compute the conformal threshold from held-out labelled data using the specified score type.
 
-    if not 0 < alpha < 1:
-        raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The classification model.
+    x : torch.Tensor
+        Calibration input tensor.
+    y : torch.Tensor
+        Calibration true labels tensor.
+    alpha : float
+        Miscoverage level in ``(0, 1)``.
 
-    nb_calibration_samples = len(x)
+    Returns
+    -------
+    Calibration
+        The resulting calibration object with computed threshold ``qhat``.
+    """
+    calibration_scores = compute_calibration_scores_classification(model, x, y)
+    return calibrate(calibration_scores, alpha)
 
-    probs = predict_probs(model, x)  # (nb_calibration_samples, nb_classes), in [0, 1]
 
-    prob_true_class = probs[torch.arange(nb_calibration_samples), y]
-    
+def compute_calibration_scores_classification(
+    model: torch.nn.Module,
+    x: torch.Tensor,
+    y: torch.Tensor,
+) -> torch.Tensor:
+    """Compute local average conformity scores for calibration.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The classification model.
+    x : torch.Tensor
+        Input features tensor.
+    y : torch.Tensor
+        True labels tensor.
+
+    Returns
+    -------
+    torch.Tensor
+        Calibration scores tensor of shape ``(n_calibration_samples,)`` in ``[0, 1]``.
+    """
+    n_calibration_samples = len(x)
+    probs = predict_probs(model, x)  # (n_calibration_samples, nb_classes), in [0, 1]
+    prob_true_class = probs[torch.arange(n_calibration_samples), y]
     # Local Average Conformity: 1 - p(true_class)
-    calibration_scores = 1 - prob_true_class  # (nb_calibration_samples), in [0, 1]
-
-    qhat = conformal_quantile(calibration_scores, alpha)
-    calibration = Calibration(alpha, qhat, nb_calibration_samples)
-
-    return calibration
+    calibration_scores = 1 - prob_true_class  # (n_calibration_samples), in [0, 1]
+    return calibration_scores
 
 
 def evaluate_classification(
@@ -65,7 +145,24 @@ def evaluate_classification(
     y: torch.Tensor,
     calibration: Calibration,
 ) -> ClassificationUncertainty:
-    """Build prediction sets on the test set, and measure coverage and set size."""
+    """Build prediction sets on the test set, and measure coverage and set size.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        The classification model.
+    x : torch.Tensor
+        Test input features tensor.
+    y : torch.Tensor
+        Test true labels tensor.
+    calibration : Calibration
+        Fitted calibration object containing ``qhat``.
+
+    Returns
+    -------
+    ClassificationUncertainty
+        Evaluation results containing coverage statistics and set sizes.
+    """
 
     probs = predict_probs(model, x)  # (nb_test_samples, nb_classes), in [0, 1]
 

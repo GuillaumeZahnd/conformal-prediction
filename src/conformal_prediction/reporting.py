@@ -40,7 +40,7 @@ def format_classification_calibration(calibration: Calibration) -> str:
         "-" * 64,
         "CALIBRATION REPORT",
         "-" * 64,
-        f"Calibration samples: {calibration.nb_calibration_samples}",
+        f"Calibration samples: {calibration.n_calibration_samples}",
         f"alpha: {calibration.alpha}  (target coverage >= {1 - calibration.alpha:.1%})",
     ]
     if math.isinf(calibration.qhat):
@@ -59,7 +59,7 @@ def format_regression_calibration(calibration: Calibration) -> str:
         "-" * 64,
         "CALIBRATION REPORT",
         "-" * 64,
-        f"Calibration samples: {calibration.nb_calibration_samples}",
+        f"Calibration samples: {calibration.n_calibration_samples}",
         f"alpha: {calibration.alpha}  (target coverage >= {1 - calibration.alpha:.1%})",
     ]
     if math.isinf(calibration.qhat):
