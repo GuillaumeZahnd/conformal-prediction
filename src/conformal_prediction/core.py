@@ -15,13 +15,18 @@ class Calibration:
     qhat : float
         Calibrated threshold: the finite-sample corrected ``1 - alpha`` quantile of the calibration scores.
         ``inf`` when the calibration set is too small for this ``alpha``.
-    n_calibration_samples : int
-        Number of labelled samples used for the calibration.
+    calibration_scores: torch.Tensor
+        Calibration scores tensor of shape ``(n_calibration_samples,)`` in ``[0, 1]``.
     """
 
     alpha: float
     qhat: float
-    n_calibration_samples: int
+    calibration_scores: torch.Tensor
+
+    @property
+    def n_calibration_samples(self) -> int:
+        """Number of labelled samples used for the calibration."""
+        return self.calibration_scores.shape[0]
 
 
 def conformal_quantile(
@@ -42,6 +47,7 @@ def conformal_quantile(
     float
         The ``k``-th smallest score, with ``k = ceil((n_samples + 1) * (1 - alpha))``.
         ``inf`` if ``k > n_samples``, i.e. the calibration set is too small for this ``alpha``.
+
     Raises
     ------
     ValueError
@@ -82,5 +88,4 @@ def calibrate(
         raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
 
     qhat = conformal_quantile(calibration_scores, alpha)
-    n_calibration_samples = len(calibration_scores)
-    return Calibration(alpha, qhat, n_calibration_samples)
+    return Calibration(alpha=alpha, qhat=qhat, calibration_scores=calibration_scores)

@@ -20,6 +20,10 @@ from .reporting import (
     format_regression_calibration,
 )
 
+from .regularized_adaptive_prediction_sets import (
+    regularize,
+)    
+
 __all__ = [
     # core
     "Calibration",
@@ -39,4 +43,6 @@ __all__ = [
     "format_classification_calibration",
     "format_regression_uncertainty",
     "format_regression_calibration",
+    # regularized_adaptive_prediction_sets
+    regularize    
 ]

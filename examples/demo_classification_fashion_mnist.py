@@ -38,8 +38,20 @@ def demo_classification_fashion_mnist(cfg: DictConfig) -> None:
     calibration_split, test_split = split_dataset(test_dataset, ratio=0.5, seed=cfg.random_seed)
 
     # Calibration step
-    calibration = calibrate_classification(model, calibration_split.x, calibration_split.y, cfg.alpha)
+    calibration = calibrate_classification(
+        model=model,
+        x=calibration_split.x,
+        y=calibration_split.y,
+        alpha=cfg.alpha
+    )        
     print(format_classification_calibration(calibration), end="\n\n")
+
+    from viz import plot_conformal_calibration
+    plot_conformal_calibration(
+        calibration_scores=calibration.calibration_scores,
+        calibration=calibration,
+        title="classification_calibration",
+    )
 
     # Test step
     uncertainty = evaluate_classification(model, test_split.x, test_split.y, calibration)
@@ -65,4 +77,4 @@ def demo_classification_fashion_mnist(cfg: DictConfig) -> None:
 
 
 if __name__ =="__main__":
-    demo_classification_fashion_mnist()
+    demo_classification_fashion_mnist() 

@@ -85,7 +85,8 @@ def calibrate_regression(
         The resulting calibration object with computed threshold ``qhat``.
     """
     calibration_scores = compute_calibration_scores_regression(model, x, y)
-    return calibrate(calibration_scores, alpha)
+    calibration = calibrate(calibration_scores, alpha)
+    return calibration
 
 
 def compute_calibration_scores_regression(

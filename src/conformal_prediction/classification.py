@@ -107,7 +107,8 @@ def calibrate_classification(
         The resulting calibration object with computed threshold ``qhat``.
     """
     calibration_scores = compute_calibration_scores_classification(model, x, y)
-    return calibrate(calibration_scores, alpha)
+    calibration = calibrate(calibration_scores, alpha)    
+    return calibration
 
 
 def compute_calibration_scores_classification(

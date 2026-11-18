@@ -31,8 +31,21 @@ def demo_regression_california_housing(cfg: DictConfig) -> None:
     calibration_split, test_split = split_dataset(test_dataset, ratio=0.5, seed=cfg.random_seed)
 
     # Calibration step
-    calibration = calibrate_regression(model, calibration_split.x, calibration_split.y, alpha=cfg.alpha)
+    calibration = calibrate_regression(
+        model=model,
+        x=calibration_split.x,
+        y=calibration_split.y,
+        alpha=cfg.alpha
+    )
     print(format_regression_calibration(calibration), end="\n\n")
+
+
+    from viz import plot_conformal_calibration
+    plot_conformal_calibration(
+        calibration_scores=calibration.calibration_scores,
+        calibration=calibration,
+        title="regression_calibration",
+    )
 
     # Test step
     uncertainty = evaluate_regression(model, test_split.x, test_split.y, calibration)
