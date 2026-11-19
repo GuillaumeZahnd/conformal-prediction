@@ -15,7 +15,7 @@ def get_qhat(
 
     n_samples = softmax_values.shape[0]
 
-    softmax_values_sorted_regularized, pi_indices_calibration = regularize(
+    softmax_values_sorted_regularized, pi_indices_calibration = _regularize(
         softmax_values=softmax_values,
         k_regularization=k_regularization,
         lambda_regularization=lambda_regularization,
@@ -46,7 +46,48 @@ def get_qhat(
     return qhat
 
 
-def regularize(
+def get_prediction_sets(
+    softmax_values: torch.Tensor,
+    qhat: torch.Tensor,
+    k_regularization: int,
+    lambda_regularization: float,
+    randomize: bool,
+    prohibit_empty_sets: bool,
+) -> torch.Tensor:
+
+    device = softmax_values.device
+    dtype = softmax_values.dtype
+
+    n_samples_test = softmax_values.shape[0]
+
+    softmax_values_sorted_regularized, pi_indices_test = _regularize(
+        softmax_values=softmax_values,
+        k_regularization=k_regularization,
+        lambda_regularization=lambda_regularization,
+    )
+
+    # Will exceed 1.0 due the addition of the regularization vector
+    softmax_values_sorted_regularized_cumsum = softmax_values_sorted_regularized.cumsum(dim=1)  # (n_samples_test, n_classes)
+
+
+    if randomize:
+        random_factors = torch.rand((n_samples_test, 1), device=device, dtype=dtype)
+        cumsum_shift_random_scale = softmax_values_sorted_regularized_cumsum - random_factors * softmax_values_sorted_regularized
+        indicators = cumsum_shift_random_scale <= qhat
+    else:
+        # cumulative sum shifted right by 1 with 0 in front
+        cumsum_shift = softmax_values_sorted_regularized_cumsum - softmax_values_sorted_regularized
+        indicators = cumsum_shift <= qhat
+
+    if prohibit_empty_sets:
+        indicators[:,0] = True
+
+    prediction_sets = torch.take_along_dim(indicators, pi_indices_test.argsort(dim=1), dim=1)  # (n_samples_test, n_classes)
+
+    return prediction_sets
+
+
+def _regularize(
     softmax_values: torch.Tensor,
     k_regularization: int,
     lambda_regularization: float,

@@ -21,7 +21,7 @@ from .reporting import (
 )
 
 from .regularized_adaptive_prediction_sets import (
-    regularize,
+    get_prediction_sets,
     get_qhat,
 )    
 
@@ -45,6 +45,6 @@ __all__ = [
     "format_regression_uncertainty",
     "format_regression_calibration",
     # regularized_adaptive_prediction_sets
-    "regularize",
+    "get_prediction_sets",
     "get_qhat",    
 ]

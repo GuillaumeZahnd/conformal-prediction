@@ -9,3 +9,6 @@ models/
 figures/
 .venv/
 .aider*
+*.png
+*.svg
+.ipynb_checkpoints

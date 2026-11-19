@@ -1,0 +1,6 @@
+# Set RAPS regularization parameters (larger lambda_regularization and smaller k_regularization leads to smaller sets)
+alpha: 0.05 # 1-alpha is the desired coverage
+k_regularization: 5
+lambda_regularization: 0.01
+randomize: true # Set this to true in order to see the coverage upper bound hold
+prohibit_empty_sets: false # Set this to false in order to see the coverage upper bound hold
