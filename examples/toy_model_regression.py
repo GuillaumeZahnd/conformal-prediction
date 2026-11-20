@@ -1,25 +1,25 @@
 from pathlib import Path
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from toy_datasets import Data
+from toy_datasets import RegressionDataset
 
 
 class ToyMLP(nn.Module):
-    """
-    Small MLP for tabular regression.
+    """Small MLP for tabular regression.
+
     Takes raw features, standardizes them internally (per-feature statistics from the
     training data), and returns one prediction per sample, in the units of the target.
     """
+
     def __init__(
         self,
         nb_features: int,
         mean: torch.Tensor | None = None,
         std: torch.Tensor | None = None,
         hidden: int = 64,
-    ):
+    ) -> None:
         super().__init__()
         self.register_buffer("mean", torch.zeros(nb_features) if mean is None else mean.clone())
         self.register_buffer("std", torch.ones(nb_features) if std is None else std.clone())
@@ -30,24 +30,34 @@ class ToyMLP(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net((x - self.mean) / self.std).squeeze(-1)   # (N, nb_features) -> (N,)
+        return self.net((x - self.mean) / self.std).squeeze(-1)  # (N, nb_features) -> (N,)
 
 
 def train_toy_regression_model(
-    train: Data,
+    train: RegressionDataset,
     weights_path: str,
     epochs: int = 20,
     batch_size: int = 128,
     lr: float = 1e-3,
     seed: int = 0,
 ) -> None:
-    """
-    Train a ToyMLP with a squared-error loss and save its weights to `weights_path`.
+    """Train a ``ToyMLP`` with squared-error loss and save its weights to ``weights_path``.
+
     Normalization statistics come from the training data only and are saved with the weights.
     """
+    if len(train) == 0:
+        raise ValueError("train dataset must not be empty.")
+    if train.x.ndim < 2:
+        raise ValueError(f"Expected 2D feature tensor (N, nb_features), got shape {tuple(train.x.shape)}.")
+
     torch.manual_seed(seed)
-    model = ToyMLP(nb_features=train.x.shape[1], mean=train.x.mean(dim=0), std=train.x.std(dim=0))
+    model = ToyMLP(
+        nb_features=train.x.shape[1],
+        mean=train.x.mean(dim=0),
+        std=train.x.std(dim=0),
+    )
     opt = torch.optim.Adam(model.parameters(), lr)
+    model.train()
     for _ in range(epochs):
         perm = torch.randperm(len(train))
         for i in range(0, len(perm), batch_size):
@@ -62,7 +72,7 @@ def train_toy_regression_model(
 
 
 def load_toy_regression_model(weights_path: str) -> ToyMLP:
-    """Load a ToyMLP saved by `train_toy_regression_model`, in eval mode."""
+    """Load a ``ToyMLP`` saved by ``train_toy_regression_model``, in eval mode."""
     path = Path(weights_path)
     if not path.exists():
         raise FileNotFoundError(f"No weights at {path}; run train_toy_regression_model first.")

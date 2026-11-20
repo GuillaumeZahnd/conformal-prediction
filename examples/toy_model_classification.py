@@ -1,19 +1,18 @@
 from pathlib import Path
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from toy_datasets import Data
+from toy_datasets import ClassificationDataset
 
 
 class ToyCNN(nn.Module):
-    """
-    Small CNN for 28x28 grayscale images.
+    """Small CNN for 28x28 grayscale images.
+
     Takes images in [0, 1], normalizes them internally, and returns logits.
     """
 
-    def __init__(self, mean: float = 0.0, std: float = 1.0, nb_classes: int = 10):
+    def __init__(self, mean: float = 0.0, std: float = 1.0, nb_classes: int = 10) -> None:
         super().__init__()
         self.register_buffer("mean", torch.tensor(float(mean)))
         self.register_buffer("std", torch.tensor(float(std)))
@@ -28,20 +27,28 @@ class ToyCNN(nn.Module):
 
 
 def train_toy_classification_model(
-    train: Data,
+    train: ClassificationDataset,
     weights_path: str,
     epochs: int = 1,
     batch_size: int = 128,
     lr: float = 1e-3,
-    seed: int = 0
+    seed: int = 0,
 ) -> None:
-    """
-    Train a ToyCNN and save its weights to `weights_path`.
+    """Train a ``ToyCNN`` and save its weights to ``weights_path``.
+
     Normalization statistics come from the training data only and are saved with the weights.
     """
+    if len(train) == 0:
+        raise ValueError("train dataset must not be empty.")
+
     torch.manual_seed(seed)
-    model = ToyCNN(mean=train.x.mean(), std=train.x.std())
+    model = ToyCNN(
+        mean=float(train.x.mean()),
+        std=float(train.x.std()),
+        nb_classes=len(train.class_names),
+    )
     opt = torch.optim.Adam(model.parameters(), lr)
+    model.train()
     for _ in range(epochs):
         perm = torch.randperm(len(train))
         for i in range(0, len(perm), batch_size):
@@ -56,10 +63,12 @@ def train_toy_classification_model(
 
 
 def load_toy_classification_model(weights_path: str) -> ToyCNN:
-    """Load a ToyCNN saved by `train_toy_classification_model`, in eval mode."""
+    """Load a ``ToyCNN`` saved by ``train_toy_classification_model``, in eval mode."""
     path = Path(weights_path)
     if not path.exists():
         raise FileNotFoundError(f"No weights at {path}; run train_toy_classification_model first.")
-    model = ToyCNN()   # placeholder mean/std: overwritten by the saved ones below
-    model.load_state_dict(torch.load(path, map_location="cpu"))
+    state = torch.load(path, map_location="cpu")
+    nb_classes = state["net.7.weight"].shape[0] if "net.7.weight" in state else 10
+    model = ToyCNN(nb_classes=nb_classes)
+    model.load_state_dict(state)
     return model.eval()
